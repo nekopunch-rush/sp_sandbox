@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: testjava21
+  config:
+    activate:
+      on-profile: mysql
+  # MySQL Configuration
+  datasource:
+    url: jdbc:mysql://localhost:3306/healthlog?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: your_mysql_user
+    password: your_mysql_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  # PostgreSQL Configuration
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/healthlog
+#    username: your_postgres_user
+#    password: your_postgres_password
+#    driver-class-name: org.postgresql.Driver
+#    hikari:
+#      maximum-pool-size: 10
+#      minimum-idle: 2
+#      idle-timeout: 600000
+#      max-lifetime: 1800000
+#      connection-timeout: 30000
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: nekopunch_rush.testjava21.infrastructure.repository.entity
+
+

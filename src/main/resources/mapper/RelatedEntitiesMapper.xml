@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nekopunch_rush.testjava21.infrastructure.repository.mapper.RelatedEntitiesMapper">
+
+    <!-- BodyMetrics -->
+    <resultMap id="bodyMetricsResultMap" type="BodyMetricsEntity">
+        <id property="userId" column="user_id" />
+        <id property="logDate" column="log_date" />
+        <result property="weight" column="weight" />
+        <result property="bodyFatPercentage" column="body_fat_percentage" />
+        <result property="muscleMass" column="muscle_mass" />
+        <result property="measuredAt" column="measured_at" />
+    </resultMap>
+
+    <select id="selectBodyMetrics" resultMap="bodyMetricsResultMap">
+        SELECT * FROM body_metrics
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+    <!-- Activity -->
+    <resultMap id="activityResultMap" type="ActivityEntity">
+        <id property="userId" column="user_id" />
+        <id property="logDate" column="log_date" />
+        <result property="type" column="type" />
+        <result property="startedAt" column="started_at" />
+        <result property="durationInMinutes" column="duration_in_minutes" />
+        <result property="distanceKm" column="distance_km" />
+        <result property="steps" column="steps" />
+        <result property="caloriesBurned" column="calories_burned" />
+    </resultMap>
+
+    <select id="selectActivity" resultMap="activityResultMap">
+        SELECT * FROM activity
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+    <!-- Meal -->
+    <resultMap id="mealResultMap" type="MealEntity">
+        <id property="userId" column="user_id" />
+        <id property="logDate" column="log_date" />
+        <result property="time" column="time" />
+        <result property="content" column="content" />
+        <result property="calories" column="calories" />
+        <result property="photoUrl" column="photo_url" />
+    </resultMap>
+
+    <select id="selectMeal" resultMap="mealResultMap">
+        SELECT * FROM meal
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+    <!-- MentalNote -->
+    <resultMap id="mentalNoteResultMap" type="MentalNoteEntity">
+        <id property="userId" column="user_id" />
+        <id property="logDate" column="log_date" />
+        <result property="recordedAt" column="recorded_at" />
+        <result property="stressLevel" column="stress_level" />
+        <result property="motivationLevel" column="motivation_level" />
+        <result property="note" column="note" />
+    </resultMap>
+
+    <select id="selectMentalNote" resultMap="mentalNoteResultMap">
+        SELECT * FROM mental_note
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+</mapper>

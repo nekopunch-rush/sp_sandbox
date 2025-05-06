@@ -1,0 +1,79 @@
+@startuml
+
+entity "User" as user {
+  * id : Long
+  --
+  name : String
+  birthdate : Date
+  height : Double
+  gender : String
+}
+
+entity "DailyLog" as log {
+  * id : Long
+  --
+  logDate : Date
+  sleepHours : Double
+  moodLevel : Int
+  user_id : Long
+}
+
+entity "BodyMetrics" as metrics {
+  * id : Long
+  --
+  measuredAt : DateTime
+  weight : Double
+  bodyFat : Double
+  muscleMass : Double
+  daily_log_id : Long
+}
+
+entity "Activity" as activity {
+  * id : Long
+  --
+  type : String
+  startedAt : DateTime
+  duration : Int
+  distance : Double
+  steps : Int
+  caloriesBurned : Int
+  daily_log_id : Long
+}
+
+entity "Meal" as meal {
+  * id : Long
+  --
+  time : Time
+  content : String
+  calories : Int
+  photoUrl : String
+  daily_log_id : Long
+}
+
+entity "MentalNote" as mental {
+  * id : Long
+  --
+  stressLevel : Int
+  motivation : Int
+  note : Text
+  daily_log_id : Long
+}
+
+entity "HealthEvent" as health {
+  * id : Long
+  --
+  symptom : String
+  severity : String
+  notes : Text
+  daily_log_id : Long
+}
+
+' Relations
+user ||--o{ log : "has"
+log ||--o{ metrics : "has many"
+log ||--o{ activity : "has many"
+log ||--o{ meal : "has many"
+log ||--o{ mental : "can have many"
+log ||--o{ health : "can have many"
+
+@enduml

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nekopunch_rush.testjava21.infrastructure.repository.mapper.DailyLogMapper">
+
+    <!-- ResultMap -->
+    <resultMap id="dailyLogResultMap" type="DailyLogEntity">
+        <id property="userId" column="user_id" />
+        <id property="logDate" column="log_date" />
+        <result property="sleepHours" column="sleep_hours" />
+        <result property="moodLevel" column="mood_level" />
+    </resultMap>
+
+    <!-- Insert -->
+    <insert id="insert" parameterType="DailyLogEntity">
+        INSERT INTO daily_log (user_id, log_date, sleep_hours, mood_level)
+        VALUES (#{log.userId}, #{log.logDate}, #{log.sleepHours}, #{log.moodLevel})
+    </insert>
+
+    <!-- Update -->
+    <update id="update">
+        UPDATE daily_log
+        SET sleep_hours = #{log.sleepHours},
+            mood_level = #{log.moodLevel}
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </update>
+
+    <!-- Delete -->
+    <delete id="delete">
+        DELETE FROM daily_log
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </delete>
+
+    <!-- Find by userId and logDate -->
+    <select id="findByUserIdAndLogDate" resultMap="dailyLogResultMap">
+        SELECT * FROM daily_log
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+    <!-- Find by userId and month -->
+    <select id="findByUserIdAndMonth" resultMap="dailyLogResultMap">
+        SELECT * FROM daily_log
+        WHERE user_id = #{userId}
+            AND YEAR(log_date) = #{year}
+          AND MONTH(log_date) = #{month}
+        ORDER BY log_date
+    </select>
+
+    <!-- Count -->
+    <select id="countByUserIdAndLogDate" resultType="int">
+        SELECT COUNT(*) FROM daily_log
+        WHERE user_id = #{userId} AND log_date = #{logDate}
+    </select>
+
+    <!-- ここから追加  -->
+    <!-- BodyMetrics -->
+    <insert id="insertBodyMetrics">
+        INSERT INTO body_metrics (user_id, log_date, weight, body_fat_percentage, muscle_mass, measured_at)
+        VALUES
+        <foreach collection="metrics" item="m" separator=",">
+            (#{m.userId}, #{m.logDate}, #{m.weight}, #{m.bodyFatPercentage}, #{m.muscleMass}, #{m.measuredAt})
+        </foreach>
+    </insert>
+
+    <update id="updateBodyMetrics">
+        <!-- 一旦削除して再挿入の方が一般的な対応になる場合あり -->
+        <!-- または、必要に応じて WHERE句を指定した UPDATE 文をループ -->
+    </update>
+
+    <delete id="deleteBodyMetrics">
+        DELETE FROM body_metrics WHERE user_id = #{userId} AND log_date = #{logDate}
+    </delete>
+
+    <!-- Activity -->
+    <insert id="insertActivity">
+        INSERT INTO activity (user_id, log_date, type, started_at, duration_in_minutes, distance_km, steps, calories_burned)
+        VALUES
+        <foreach collection="activities" item="a" separator=",">
+            (#{a.userId}, #{a.logDate}, #{a.type}, #{a.startedAt}, #{a.durationInMinutes}, #{a.distanceKm}, #{a.steps}, #{a.caloriesBurned})
+        </foreach>
+    </insert>
+
+    <update id="updateActivity">
+        <!-- 同上：DELETE + INSERT戦略が一般的です -->
+    </update>
+
+    <delete id="deleteActivity">
+        DELETE FROM activity WHERE user_id = #{userId} AND log_date = #{logDate}
+    </delete>
+
+    <!-- Meal -->
+    <insert id="insertMeal">
+        INSERT INTO meal (user_id, log_date, time, content, calories, photo_url)
+        VALUES
+        <foreach collection="meals" item="m" separator=",">
+            (#{m.userId}, #{m.logDate}, #{m.time}, #{m.content}, #{m.calories}, #{m.photoUrl})
+        </foreach>
+    </insert>
+
+    <update id="updateMeal">
+        <!-- 同上 -->
+    </update>
+
+    <delete id="deleteMeal">
+        DELETE FROM meal WHERE user_id = #{userId} AND log_date = #{logDate}
+    </delete>
+
+    <!-- MentalNote -->
+    <insert id="insertMentalNote">
+        INSERT INTO mental_note (user_id, log_date, recorded_at, stress_level, motivation_level, note)
+        VALUES
+        <foreach collection="notes" item="n" separator=",">
+            (#{n.userId}, #{n.logDate}, #{n.recordedAt}, #{n.stressLevel}, #{n.motivationLevel}, #{n.note})
+        </foreach>
+    </insert>
+
+    <update id="updateMentalNote">
+        <!-- 同上 -->
+    </update>
+
+    <delete id="deleteMentalNote">
+        DELETE FROM mental_note WHERE user_id = #{userId} AND log_date = #{logDate}
+    </delete>
+
+</mapper>
