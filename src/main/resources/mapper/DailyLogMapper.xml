@@ -24,7 +24,7 @@
         UPDATE daily_log
         SET sleep_hours = #{log.sleepHours},
             mood_level = #{log.moodLevel}
-        WHERE user_id = #{userId} AND log_date = #{logDate}
+        WHERE user_id = #{log.userId} AND log_date = #{logDate}
     </update>
 
     <!-- Delete -->

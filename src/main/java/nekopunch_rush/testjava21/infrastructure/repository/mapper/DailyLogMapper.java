@@ -34,8 +34,7 @@ public interface DailyLogMapper {
     // DailyLog
     void insert(@Param("log") DailyLogEntity log);
 
-    void update(@Param("userId") Long userId,
-                @Param("logDate") LocalDate logDate,
+    void update(@Param("logDate") LocalDate logDate,
                 @Param("log") DailyLogEntity log);
 
     void delete(@Param("userId") Long userId,

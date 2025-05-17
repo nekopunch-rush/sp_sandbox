@@ -26,12 +26,12 @@ public class DailyLogServiceImpl implements DailyLogService {
     }
 
     @Override
-    public void update(Long userId, LocalDate logDate, DailyLog updatedLog) throws NotFoundException {
-        DailyLog existing = repository.findByUserIdAndLogDate(userId, logDate)
-                .orElseThrow(() -> new NotFoundException("指定されたログが存在しません。"));
-
-        // 更新処理（置き換え or 差分更新）
-        repository.update(userId, logDate, updatedLog);
+    public void update(LocalDate logDate, DailyLog updatedLog) throws NotFoundException {
+        Long userId = updatedLog.getUserId();
+        if (!repository.existsByUserIdAndLogDate(userId, logDate)) {
+            throw new NotFoundException("指定されたログが存在しません。");
+        }
+        repository.update(logDate, updatedLog);
     }
 
     @Override
@@ -53,5 +53,4 @@ public class DailyLogServiceImpl implements DailyLogService {
         return repository.findByUserIdAndMonth(userId, yearMonth);
     }
 }
-
 

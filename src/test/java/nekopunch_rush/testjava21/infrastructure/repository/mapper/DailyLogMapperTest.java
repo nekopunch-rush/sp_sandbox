@@ -81,7 +81,7 @@ class DailyLogMapperTest {
                 .sleepHours(8.0)
                 .moodLevel(5)
                 .build();
-        dailyLogMapper.update(2L, LocalDate.of(2025, 6, 1), updated);
+        dailyLogMapper.update(LocalDate.of(2025, 6, 1), updated);
 
         DailyLogEntity result = dailyLogMapper.findByUserIdAndLogDate(2L, LocalDate.of(2025, 6, 1));
         assertThat(result).isNotNull();
@@ -99,7 +99,7 @@ class DailyLogMapperTest {
                 .moodLevel(1)
                 .build();
         // 存在しないデータのupdateは例外は出ないが、更新もされない
-        dailyLogMapper.update(999L, LocalDate.of(2099, 1, 1), updated);
+        dailyLogMapper.update(LocalDate.of(2099, 1, 1), updated);
         DailyLogEntity result = dailyLogMapper.findByUserIdAndLogDate(999L, LocalDate.of(2099, 1, 1));
         assertThat(result).isNull();
     }
