@@ -33,15 +33,15 @@ public class DailyLogRepositoryImpl implements DailyLogRepository {
     }
 
     @Override
-    public void update(Long userId, LocalDate logDate, DailyLog log) {
+    public void update(LocalDate logDate, DailyLog log) {
         DailyLogEntity entity = DailyLogMapperSupport.toEntity(log);
-        dailyLogMapper.update(userId, logDate, entity);
+        dailyLogMapper.update(logDate, entity);
 
         // 削除して再登録（差分更新しない方針）
-        dailyLogMapper.deleteBodyMetrics(userId, logDate);
-        dailyLogMapper.deleteActivity(userId, logDate);
-        dailyLogMapper.deleteMeal(userId, logDate);
-        dailyLogMapper.deleteMentalNote(userId, logDate);
+        dailyLogMapper.deleteBodyMetrics(log.getUserId(), logDate);
+        dailyLogMapper.deleteActivity(log.getUserId(), logDate);
+        dailyLogMapper.deleteMeal(log.getUserId(), logDate);
+        dailyLogMapper.deleteMentalNote(log.getUserId(), logDate);
 
         dailyLogMapper.insertBodyMetrics(DailyLogMapperSupport.toBodyMetricsEntities(log));
         dailyLogMapper.insertActivity(DailyLogMapperSupport.toActivityEntities(log));

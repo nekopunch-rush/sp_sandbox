@@ -11,7 +11,7 @@ public interface DailyLogService {
 
     void register(DailyLog log);
 
-    void update(Long userId, LocalDate logDate, DailyLog log) throws NotFoundException;
+    void update(LocalDate logDate, DailyLog log) throws NotFoundException;
 
     void delete(Long userId, LocalDate logDate) throws NotFoundException;
 

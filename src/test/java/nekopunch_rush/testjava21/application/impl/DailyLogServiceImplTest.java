@@ -93,10 +93,11 @@ class DailyLogServiceImplTest {
                         null,
                         null,
                         null)));
+        when(repository.existsByUserIdAndLogDate(userId, date)).thenReturn(true);
 
-        service.update(userId, date, updated);
+        service.update(date, updated);
 
-        verify(repository).update(userId, date, updated);
+        verify(repository).update(date, updated);
     }
 
     @Test
@@ -115,8 +116,8 @@ class DailyLogServiceImplTest {
                 null);
         when(repository.findByUserIdAndLogDate(userId, date)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> service.update(userId, date, updated));
-        verify(repository, never()).update(any(), any(), any());
+        assertThrows(NotFoundException.class, () -> service.update(date, updated));
+        verify(repository, never()).update(any(), any());
     }
 
     @Test

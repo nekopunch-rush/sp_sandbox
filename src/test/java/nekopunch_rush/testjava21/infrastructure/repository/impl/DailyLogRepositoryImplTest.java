@@ -68,6 +68,9 @@ class DailyLogRepositoryImplTest {
         DailyLog log = mock(DailyLog.class);
         DailyLogEntity entity = mock(DailyLogEntity.class);
 
+        when(log.getUserId()).thenReturn(userId);
+        when(log.getLogDate()).thenReturn(logDate);
+
         try (var mocked = mockStatic(DailyLogMapperSupport.class)) {
             mocked.when(() -> DailyLogMapperSupport.toEntity(log)).thenReturn(entity);
             mocked.when(() -> DailyLogMapperSupport.toBodyMetricsEntities(log)).thenReturn(Collections.emptyList());
@@ -75,9 +78,9 @@ class DailyLogRepositoryImplTest {
             mocked.when(() -> DailyLogMapperSupport.toMealEntities(log)).thenReturn(Collections.emptyList());
             mocked.when(() -> DailyLogMapperSupport.toMentalNoteEntities(log)).thenReturn(Collections.emptyList());
 
-            repository.update(userId, logDate, log);
+            repository.update(logDate, log);
 
-            verify(dailyLogMapper).update(userId, logDate, entity);
+            verify(dailyLogMapper).update(logDate, entity);
             verify(dailyLogMapper).deleteBodyMetrics(userId, logDate);
             verify(dailyLogMapper).deleteActivity(userId, logDate);
             verify(dailyLogMapper).deleteMeal(userId, logDate);
