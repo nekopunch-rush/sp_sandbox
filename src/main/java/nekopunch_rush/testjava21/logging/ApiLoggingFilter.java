@@ -197,7 +197,7 @@ public class ApiLoggingFilter {
             stringBuilder.append("(empty)\n");
         } else if (isBinaryContentType(contentType)) {
             // バイナリデータの場合はサイズ情報のみ出力
-            String contentTypeStr = contentType != null ? contentType.toString() : "unknown";
+            String contentTypeStr = contentType.toString();
             stringBuilder.append("[Binary data: ").append(bodyBytes.length).append(" bytes, Content-Type: ").append(contentTypeStr).append("]\n");
         } else if (bodyBytes.length > MAX_BODY_SIZE) {
             String truncatedBody = new String(bodyBytes, 0, MAX_BODY_SIZE, StandardCharsets.UTF_8);
