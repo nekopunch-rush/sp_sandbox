@@ -12,9 +12,12 @@ import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import org.springframework.http.MediaType;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 /**
  * WebClientのリクエスト/レスポンスをログ出力するためのフィルタークラス。
@@ -32,6 +35,32 @@ public class ApiLoggingFilter {
 
     /** ログ出力するボディの最大サイズ（バイト） */
     private static final int MAX_BODY_SIZE = 10 * 1024; // 10KB
+
+    /** バイナリとして扱うContent-Typeのセット */
+    private static final Set<String> BINARY_MEDIA_TYPES = Set.of(
+        "application/octet-stream",
+        "application/pdf",
+        "application/zip",
+        "application/gzip",
+        "application/x-gzip",
+        "application/x-tar",
+        "application/x-rar-compressed",
+        "application/x-7z-compressed",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    );
+
+    /** バイナリとして扱うContent-Typeのプレフィックス */
+    private static final Set<String> BINARY_MEDIA_TYPE_PREFIXES = Set.of(
+        "image/",
+        "audio/",
+        "video/",
+        "font/"
+    );
 
     /**
      * リクエストをログ出力するExchangeFilterFunctionを返す。
@@ -149,12 +178,14 @@ public class ApiLoggingFilter {
      * リクエストまたはレスポンスのボディをStringBuilderに追記する。
      * <p>
      * ボディが{@link #MAX_BODY_SIZE}を超える場合は切り詰めて出力する。
+     * バイナリコンテンツの場合はサイズ情報のみを出力する。
      *
      * @param stringBuilder ログ出力用のStringBuilder
      * @param bodyBytes ボディのバイト配列（nullまたは空の場合は適切なメッセージを出力）
      * @param isRequest trueの場合はリクエスト、falseの場合はレスポンス
+     * @param contentType Content-Type（バイナリ判定に使用、nullの場合はテキストとして扱う）
      */
-    private static void loggingBody(StringBuilder stringBuilder, byte[] bodyBytes, boolean isRequest) {
+    private static void loggingBody(StringBuilder stringBuilder, byte[] bodyBytes, boolean isRequest, MediaType contentType) {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
@@ -164,6 +195,10 @@ public class ApiLoggingFilter {
             stringBuilder.append(isRequest ? "null" : "(no body)").append("\n");
         } else if (bodyBytes.length == 0) {
             stringBuilder.append("(empty)\n");
+        } else if (isBinaryContentType(contentType)) {
+            // バイナリデータの場合はサイズ情報のみ出力
+            String contentTypeStr = contentType != null ? contentType.toString() : "unknown";
+            stringBuilder.append("[Binary data: ").append(bodyBytes.length).append(" bytes, Content-Type: ").append(contentTypeStr).append("]\n");
         } else if (bodyBytes.length > MAX_BODY_SIZE) {
             String truncatedBody = new String(bodyBytes, 0, MAX_BODY_SIZE, StandardCharsets.UTF_8);
             stringBuilder.append(truncatedBody);
@@ -172,6 +207,43 @@ public class ApiLoggingFilter {
             stringBuilder.append(new String(bodyBytes, StandardCharsets.UTF_8)).append("\n");
         }
         stringBuilder.append(isRequest ? "========================\n" : "=========================\n");
+    }
+
+    /**
+     * Content-Type引数なしのオーバーロード（後方互換性のため）。
+     * テキストとして扱う。
+     *
+     * @param stringBuilder ログ出力用のStringBuilder
+     * @param bodyBytes ボディのバイト配列
+     * @param isRequest trueの場合はリクエスト、falseの場合はレスポンス
+     */
+    private static void loggingBody(StringBuilder stringBuilder, byte[] bodyBytes, boolean isRequest) {
+        loggingBody(stringBuilder, bodyBytes, isRequest, null);
+    }
+
+    /**
+     * 指定されたContent-Typeがバイナリデータかどうかを判定する。
+     *
+     * @param contentType 判定対象のMediaType（nullの場合はfalseを返す）
+     * @return バイナリデータの場合はtrue
+     */
+    private static boolean isBinaryContentType(MediaType contentType) {
+        if (contentType == null) {
+            return false;
+        }
+
+        String type = contentType.getType();
+        String subtype = contentType.getSubtype();
+        String fullType = type + "/" + subtype;
+
+        // 完全一致でバイナリ判定
+        if (BINARY_MEDIA_TYPES.contains(fullType)) {
+            return true;
+        }
+
+        // プレフィックス一致でバイナリ判定（image/*, audio/*, video/*, font/*）
+        String typePrefix = type + "/";
+        return BINARY_MEDIA_TYPE_PREFIXES.contains(typePrefix);
     }
 
     /**
@@ -229,11 +301,14 @@ public class ApiLoggingFilter {
                 // レスポンスメタ情報のログ出力
                 loggingResponseWithMeta(stringBuilder, response);
 
+                // Content-Typeを取得（バイナリ判定用）
+                MediaType contentType = response.headers().contentType().orElse(null);
+
                 return response.bodyToMono(byte[].class)
                     .defaultIfEmpty(new byte[0])
                     .map(bytes -> {
-                        // ボディが存在する場合
-                        loggingBody(stringBuilder, bytes, false);
+                        // ボディが存在する場合（Content-Typeを渡してバイナリ判定）
+                        loggingBody(stringBuilder, bytes, false, contentType);
                         log.info("[Response]\n{}", stringBuilder);
 
                         return ClientResponse.create(response.statusCode(), response.strategies())
@@ -244,7 +319,7 @@ public class ApiLoggingFilter {
                     })
                     .switchIfEmpty(Mono.defer(() -> {
                         // ボディが完全にない場合
-                        loggingBody(stringBuilder, null, false);
+                        loggingBody(stringBuilder, null, false, contentType);
                         log.info("[Response]\n{}", stringBuilder);
 
                         return Mono.just(ClientResponse.create(response.statusCode(), response.strategies())

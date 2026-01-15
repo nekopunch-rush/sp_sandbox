@@ -657,5 +657,312 @@ class ApiLoggingFilterTest {
             );
         }
     }
+
+    @Nested
+    @DisplayName("バイナリレスポンス テスト")
+    class BinaryResponseTests {
+
+        @Test
+        @DisplayName("画像（PNG）レスポンス - バイナリとして処理")
+        void testImagePngResponse() {
+            // Given - PNGのヘッダーを模したバイナリデータ
+            byte[] pngData = new byte[]{
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,       // IHDR chunk
+                0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,       // 16x16
+                0x08, 0x02, 0x00, 0x00, 0x00                          // color type, etc.
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
+                .setBody(new okio.Buffer().write(pngData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/image")
+                .accept(MediaType.IMAGE_PNG)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.length).isEqualTo(pngData.length);
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("----- Request Meta -----")).isTrue(),
+                () -> assertThat(hasLogContaining("Method: GET")).isTrue(),
+                () -> assertThat(hasLogContaining("/api/image")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Response Meta -----")).isTrue(),
+                () -> assertThat(hasLogContaining("Status Code: 200")).isTrue(),
+                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("bytes")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: image/png")).isTrue(),
+                () -> assertThat(hasLogContaining("=========================")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("PDFレスポンス - バイナリとして処理")
+        void testPdfResponse() {
+            // Given - PDFのヘッダーを模したバイナリデータ
+            byte[] pdfData = new byte[]{
+                0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, // %PDF-1.4
+                0x0A, 0x31, 0x20, 0x30, 0x20, 0x6F, 0x62, 0x6A,
+                0x0A, 0x3C, 0x3C, 0x0A, 0x2F, 0x54, 0x79, 0x70
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                .setBody(new okio.Buffer().write(pdfData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/document.pdf")
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("----- Response Meta -----")).isTrue(),
+                () -> assertThat(hasLogContaining("Status Code: 200")).isTrue(),
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: application/pdf")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("オクテットストリームレスポンス - バイナリとして処理")
+        void testOctetStreamResponse() {
+            // Given - 任意のバイナリデータ
+            byte[] binaryData = new byte[1024];
+            for (int i = 0; i < binaryData.length; i++) {
+                binaryData[i] = (byte) (i % 256);
+            }
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                .setBody(new okio.Buffer().write(binaryData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/download")
+                .accept(MediaType.APPLICATION_OCTET_STREAM)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.length).isEqualTo(1024);
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("----- Response Meta -----")).isTrue(),
+                () -> assertThat(hasLogContaining("Status Code: 200")).isTrue(),
+                () -> assertThat(hasLogContaining("[Binary data: 1024 bytes")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: application/octet-stream")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("JPEG画像レスポンス - バイナリとして処理")
+        void testImageJpegResponse() {
+            // Given - JPEGのヘッダーを模したバイナリデータ
+            byte[] jpegData = new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, // JPEG SOI + APP0
+                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,       // JFIF header
+                0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_JPEG_VALUE)
+                .setBody(new okio.Buffer().write(jpegData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/photo.jpg")
+                .accept(MediaType.IMAGE_JPEG)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: image/jpeg")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("GIF画像レスポンス - バイナリとして処理")
+        void testImageGifResponse() {
+            // Given - GIFのヘッダーを模したバイナリデータ
+            byte[] gifData = new byte[]{
+                0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+                0x01, 0x00, 0x01, 0x00, (byte) 0x80, 0x00, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_GIF_VALUE)
+                .setBody(new okio.Buffer().write(gifData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/animation.gif")
+                .accept(MediaType.IMAGE_GIF)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: image/gif")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("ZIPファイルレスポンス - バイナリとして処理")
+        void testZipFileResponse() {
+            // Given - ZIPのヘッダーを模したバイナリデータ
+            byte[] zipData = new byte[]{
+                0x50, 0x4B, 0x03, 0x04, // ZIP local file header signature
+                0x14, 0x00, 0x00, 0x00, 0x08, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/zip")
+                .setBody(new okio.Buffer().write(zipData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/archive.zip")
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: application/zip")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("音声ファイル（MP3）レスポンス - バイナリとして処理")
+        void testAudioMp3Response() {
+            // Given - MP3のヘッダーを模したバイナリデータ
+            byte[] mp3Data = new byte[]{
+                (byte) 0xFF, (byte) 0xFB, (byte) 0x90, 0x00, // MP3 frame header
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, "audio/mpeg")
+                .setBody(new okio.Buffer().write(mp3Data)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/music.mp3")
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: audio/mpeg")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("動画ファイル（MP4）レスポンス - バイナリとして処理")
+        void testVideoMp4Response() {
+            // Given - MP4のヘッダーを模したバイナリデータ
+            byte[] mp4Data = new byte[]{
+                0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, // ftyp box
+                0x6D, 0x70, 0x34, 0x32, 0x00, 0x00, 0x00, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, "video/mp4")
+                .setBody(new okio.Buffer().write(mp4Data)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/video.mp4")
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: video/mp4")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("Excelファイル（xlsx）レスポンス - バイナリとして処理")
+        void testExcelXlsxResponse() {
+            // Given - XLSX（ZIP形式）のヘッダーを模したバイナリデータ
+            byte[] xlsxData = new byte[]{
+                0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00,
+                0x08, 0x00, 0x00, 0x00, 0x21, 0x00
+            };
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .setBody(new okio.Buffer().write(xlsxData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/report.xlsx")
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then
+            assertThat(response).isNotNull();
+
+            // ログ出力の検証 - バイナリとして処理されていること
+            assertAll(
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).isTrue()
+            );
+        }
+    }
 }
 
