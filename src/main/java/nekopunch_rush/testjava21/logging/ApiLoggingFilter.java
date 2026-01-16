@@ -161,8 +161,8 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("\n----- Request Meta -----\n");
-        stringBuilder.append("Method: ").append(req.method()).append("\n");
+        stringBuilder.append("\n----- Request Information -----\n");
+        stringBuilder.append("METHOD: ").append(req.method()).append("\n");
         stringBuilder.append("URL: ").append(req.url()).append("\n");
         stringBuilder.append("HEADERS: ").append("\n");
         StringBuilder finalStringBuilder = stringBuilder;
@@ -271,9 +271,13 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("\n----- Response Meta -----\n");
-        stringBuilder.append("Status Code: ").append(response.statusCode().value()).append("\n");
-        stringBuilder.append("Headers: ").append(response.headers().asHttpHeaders()).append("\n");
+        stringBuilder.append("\n----- Response Information -----\n");
+        stringBuilder.append("STATUS CODE: ").append(response.statusCode()).append("\n");
+        stringBuilder.append("HEADERS: ").append("\n");
+        StringBuilder finalStringBuilder = stringBuilder;
+        response.headers().asHttpHeaders().forEach((key, values) -> {
+            values.forEach(value -> finalStringBuilder.append("    ").append(key).append(": ").append(value).append("\n"));
+        });
         stringBuilder.append("-------------------------\n");
     }
 
