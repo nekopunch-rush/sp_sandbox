@@ -17,6 +17,8 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * WebClientのリクエスト/レスポンスをログ出力するためのフィルタークラス。
@@ -299,16 +301,16 @@ public class ApiLoggingFilter {
 
                 // ログ用に先頭部分だけをキャプチャするためのバッファ
                 ByteArrayOutputStream logBuffer = new ByteArrayOutputStream();
-                // キャプチャ済みバイト数を追跡（配列で包んでラムダ内から変更可能にする）
-                int[] capturedBytes = {0};
+                // キャプチャ済みバイト数を追跡
+                AtomicInteger capturedBytes = new AtomicInteger(0);
                 // ログ出力済みフラグ
-                boolean[] logged = {false};
+                AtomicBoolean logged = new AtomicBoolean(false);
 
                 Flux<DataBuffer> bodyFlux = response.bodyToFlux(DataBuffer.class)
                     .doOnNext(dataBuffer -> {
                         // まだログ用のキャプチャ上限に達していない場合のみコピー
-                        if (capturedBytes[0] < MAX_BODY_SIZE) {
-                            int remaining = MAX_BODY_SIZE - capturedBytes[0];
+                        if (capturedBytes.get() < MAX_BODY_SIZE) {
+                            int remaining = MAX_BODY_SIZE - capturedBytes.get();
                             int readable = dataBuffer.readableByteCount();
                             int toCopy = Math.min(remaining, readable);
 
@@ -319,29 +321,26 @@ public class ApiLoggingFilter {
                                 dataBuffer.read(bytes);
                                 dataBuffer.readPosition(readPosition); // 読み取り位置を元に戻す
                                 logBuffer.writeBytes(bytes);
-                                capturedBytes[0] += toCopy;
+                                capturedBytes.addAndGet(toCopy);
                             }
                         }
                     })
                     .doOnComplete(() -> {
-                        if (!logged[0]) {
-                            logged[0] = true;
+                        if (logged.compareAndSet(false, true)) {
                             byte[] capturedData = logBuffer.toByteArray();
-                            loggingResponseBody(stringBuilder, capturedData, capturedBytes[0], contentType);
+                            loggingResponseBody(stringBuilder, capturedData, capturedBytes.get(), contentType);
                             log.info("[Response]\n{}", stringBuilder);
                         }
                     })
                     .doOnError(e -> {
-                        if (!logged[0]) {
-                            logged[0] = true;
+                        if (logged.compareAndSet(false, true)) {
                             loggingResponseWithBodyError(stringBuilder, e);
                             log.error("[Response]\n{}", stringBuilder);
                         }
                     })
                     .switchIfEmpty(Flux.defer(() -> {
                         // ボディが完全に空の場合
-                        if (!logged[0]) {
-                            logged[0] = true;
+                        if (logged.compareAndSet(false, true)) {
                             loggingResponseBody(stringBuilder, new byte[0], 0, contentType);
                             log.info("[Response]\n{}", stringBuilder);
                         }
