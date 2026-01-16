@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.reactivestreams.Publisher;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.client.reactive.ClientHttpRequestDecorator;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -85,6 +84,9 @@ public class ApiLoggingFilter {
 
             ClientRequest mutated = ClientRequest.from(request)
                 .body((outputMessage, context) -> {
+                    // Content-Typeを取得（バイナリ判定用）
+                    MediaType contentType = request.headers().getContentType();
+
                     ClientHttpRequestDecorator decorator = new ClientHttpRequestDecorator(outputMessage) {
                         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -95,8 +97,8 @@ public class ApiLoggingFilter {
                             return super.writeWith(Flux.from(body)
                                 .doOnNext(dataBuffer -> copy(dataBuffer, byteArrayOutputStream))
                                 .doOnComplete(() -> {
-                                    loggingBody(stringBuilder, byteArrayOutputStream.toByteArray(), true);
-                                    log.info("{}", stringBuilder);
+                                    loggingRequestBody(stringBuilder, byteArrayOutputStream.toByteArray(), contentType);
+                                    log.info("[Request]\n{}", stringBuilder);
                                 }));
                         }
 
@@ -108,8 +110,8 @@ public class ApiLoggingFilter {
                                 .map(inner -> Flux.from(inner)
                                     .doOnNext(dataBuffer -> copy(dataBuffer, byteArrayOutputStream)))
                                 .doOnComplete(() -> {
-                                    loggingBody(stringBuilder, byteArrayOutputStream.toByteArray(), true);
-                                    log.info("{}", stringBuilder);
+                                    loggingRequestBody(stringBuilder, byteArrayOutputStream.toByteArray(), contentType);
+                                    log.info("[Request]\n{}", stringBuilder);
                                 }));
                         }
 
@@ -167,32 +169,30 @@ public class ApiLoggingFilter {
         stringBuilder.append("HEADERS: ").append("\n");
         StringBuilder finalStringBuilder = stringBuilder;
         req.headers().forEach((key, values) -> {
-            finalStringBuilder.append("  ").append(key).append(": ");
+            finalStringBuilder.append("    ").append(key).append(": ");
             values.forEach(value -> finalStringBuilder.append(value).append(", "));
             finalStringBuilder.append("\n");
         });
-        stringBuilder.append("------------------------\n");
+        stringBuilder.append("-------------------------------\n");
     }
 
     /**
-     * リクエストまたはレスポンスのボディをStringBuilderに追記する。
+     * リクエストボディをStringBuilderに追記する。
      * <p>
      * ボディが{@link #MAX_BODY_SIZE}を超える場合は切り詰めて出力する。
      * バイナリコンテンツの場合はサイズ情報のみを出力する。
      *
      * @param stringBuilder ログ出力用のStringBuilder
      * @param bodyBytes ボディのバイト配列（nullまたは空の場合は適切なメッセージを出力）
-     * @param isRequest trueの場合はリクエスト、falseの場合はレスポンス
      * @param contentType Content-Type（バイナリ判定に使用、nullの場合はテキストとして扱う）
      */
-    private static void loggingBody(StringBuilder stringBuilder, byte[] bodyBytes, boolean isRequest, MediaType contentType) {
+    private static void loggingRequestBody(StringBuilder stringBuilder, byte[] bodyBytes, MediaType contentType) {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        String label = isRequest ? "Request" : "Response";
-        stringBuilder.append("===== ").append(label).append(" Body =====\n");
+        stringBuilder.append("===== Request Body =====\n");
         if (bodyBytes == null) {
-            stringBuilder.append(isRequest ? "null" : "(no body)").append("\n");
+            stringBuilder.append("null\n");
         } else if (bodyBytes.length == 0) {
             stringBuilder.append("(empty)\n");
         } else if (isBinaryContentType(contentType)) {
@@ -206,20 +206,9 @@ public class ApiLoggingFilter {
         } else {
             stringBuilder.append(new String(bodyBytes, StandardCharsets.UTF_8)).append("\n");
         }
-        stringBuilder.append(isRequest ? "========================\n" : "=========================\n");
+        stringBuilder.append("========================\n");
     }
 
-    /**
-     * Content-Type引数なしのオーバーロード（後方互換性のため）。
-     * テキストとして扱う。
-     *
-     * @param stringBuilder ログ出力用のStringBuilder
-     * @param bodyBytes ボディのバイト配列
-     * @param isRequest trueの場合はリクエスト、falseの場合はレスポンス
-     */
-    private static void loggingBody(StringBuilder stringBuilder, byte[] bodyBytes, boolean isRequest) {
-        loggingBody(stringBuilder, bodyBytes, isRequest, null);
-    }
 
     /**
      * 指定されたContent-Typeがバイナリデータかどうかを判定する。
@@ -278,7 +267,7 @@ public class ApiLoggingFilter {
         response.headers().asHttpHeaders().forEach((key, values) -> {
             values.forEach(value -> finalStringBuilder.append("    ").append(key).append(": ").append(value).append("\n"));
         });
-        stringBuilder.append("-------------------------\n");
+        stringBuilder.append("--------------------------------\n");
     }
 
     /**
@@ -288,12 +277,12 @@ public class ApiLoggingFilter {
      * <ul>
      *   <li>ステータスコード</li>
      *   <li>ヘッダー</li>
-     *   <li>レスポンスボディ</li>
+     *   <li>レスポンスボディ（先頭{@link #MAX_BODY_SIZE}バイトまで）</li>
      * </ul>
-     * ボディが{@link #MAX_BODY_SIZE}を超える場合は切り詰めて出力する。
      * <p>
-     * 注意: レスポンスボディを一度読み取ってログ出力した後、
-     * 新しいClientResponseを再構築して返すため、ストリーミングレスポンスには適さない場合がある。
+     * ボディが{@link #MAX_BODY_SIZE}を超える場合は先頭部分のみログ出力し、
+     * 残りのデータはそのままストリーミングで流す。
+     * これにより大きなレスポンスでもメモリ消費を抑えつつログ出力が可能。
      *
      * @return レスポンスログ出力用のExchangeFilterFunction
      */
@@ -308,34 +297,98 @@ public class ApiLoggingFilter {
                 // Content-Typeを取得（バイナリ判定用）
                 MediaType contentType = response.headers().contentType().orElse(null);
 
-                return response.bodyToMono(byte[].class)
-                    .defaultIfEmpty(new byte[0])
-                    .map(bytes -> {
-                        // ボディが存在する場合（Content-Typeを渡してバイナリ判定）
-                        loggingBody(stringBuilder, bytes, false, contentType);
-                        log.info("[Response]\n{}", stringBuilder);
+                // ログ用に先頭部分だけをキャプチャするためのバッファ
+                ByteArrayOutputStream logBuffer = new ByteArrayOutputStream();
+                // キャプチャ済みバイト数を追跡（配列で包んでラムダ内から変更可能にする）
+                int[] capturedBytes = {0};
+                // ログ出力済みフラグ
+                boolean[] logged = {false};
 
-                        return ClientResponse.create(response.statusCode(), response.strategies())
-                            .headers(headers -> headers.addAll(response.headers().asHttpHeaders()))
-                            .cookies(cookie -> cookie.addAll(response.cookies()))
-                            .body(Flux.just(new DefaultDataBufferFactory().wrap(bytes)))
-                            .build();
+                Flux<DataBuffer> bodyFlux = response.bodyToFlux(DataBuffer.class)
+                    .doOnNext(dataBuffer -> {
+                        // まだログ用のキャプチャ上限に達していない場合のみコピー
+                        if (capturedBytes[0] < MAX_BODY_SIZE) {
+                            int remaining = MAX_BODY_SIZE - capturedBytes[0];
+                            int readable = dataBuffer.readableByteCount();
+                            int toCopy = Math.min(remaining, readable);
+
+                            if (toCopy > 0) {
+                                byte[] bytes = new byte[toCopy];
+                                // DataBufferの読み取り位置を変更せずにコピー
+                                int readPosition = dataBuffer.readPosition();
+                                dataBuffer.read(bytes);
+                                dataBuffer.readPosition(readPosition); // 読み取り位置を元に戻す
+                                logBuffer.writeBytes(bytes);
+                                capturedBytes[0] += toCopy;
+                            }
+                        }
                     })
-                    .switchIfEmpty(Mono.defer(() -> {
-                        // ボディが完全にない場合
-                        loggingBody(stringBuilder, null, false, contentType);
-                        log.info("[Response]\n{}", stringBuilder);
-
-                        return Mono.just(ClientResponse.create(response.statusCode(), response.strategies())
-                            .headers(headers -> headers.addAll(response.headers().asHttpHeaders()))
-                            .cookies(cookie -> cookie.addAll(response.cookies()))
-                            .build());
-                    }))
+                    .doOnComplete(() -> {
+                        if (!logged[0]) {
+                            logged[0] = true;
+                            byte[] capturedData = logBuffer.toByteArray();
+                            loggingResponseBody(stringBuilder, capturedData, capturedBytes[0], contentType);
+                            log.info("[Response]\n{}", stringBuilder);
+                        }
+                    })
                     .doOnError(e -> {
-                        // ボディ取得エラーの場合
-                        loggingResponseWithBodyError(stringBuilder, e);
-                        log.error("[Response]\n{}", stringBuilder);
-                    });
+                        if (!logged[0]) {
+                            logged[0] = true;
+                            loggingResponseWithBodyError(stringBuilder, e);
+                            log.error("[Response]\n{}", stringBuilder);
+                        }
+                    })
+                    .switchIfEmpty(Flux.defer(() -> {
+                        // ボディが完全に空の場合
+                        if (!logged[0]) {
+                            logged[0] = true;
+                            loggingResponseBody(stringBuilder, new byte[0], 0, contentType);
+                            log.info("[Response]\n{}", stringBuilder);
+                        }
+                        return Flux.empty();
+                    }));
+
+                return Mono.just(ClientResponse.create(response.statusCode(), response.strategies())
+                    .headers(headers -> headers.addAll(response.headers().asHttpHeaders()))
+                    .cookies(cookie -> cookie.addAll(response.cookies()))
+                    .body(bodyFlux)
+                    .build());
             });
+    }
+
+    /**
+     * レスポンスボディをログ出力する。
+     * <p>
+     * キャプチャしたデータが{@link #MAX_BODY_SIZE}に達している場合は切り詰めメッセージを付与する。
+     *
+     * @param stringBuilder ログ出力用のStringBuilder
+     * @param capturedData キャプチャしたボディデータ
+     * @param totalCaptured キャプチャしたバイト数（実際のボディサイズはこれ以上の可能性あり）
+     * @param contentType Content-Type
+     */
+    private static void loggingResponseBody(StringBuilder stringBuilder, byte[] capturedData, int totalCaptured, MediaType contentType) {
+        if (stringBuilder == null) {
+            stringBuilder = new StringBuilder();
+        }
+        stringBuilder.append("===== Response Body =====\n");
+
+        if (capturedData == null || capturedData.length == 0) {
+            stringBuilder.append("(empty)\n");
+        } else if (isBinaryContentType(contentType)) {
+            // バイナリデータの場合はサイズ情報のみ出力
+            String contentTypeStr = contentType.toString();
+            if (totalCaptured >= MAX_BODY_SIZE) {
+                stringBuilder.append("[Binary data: ").append(totalCaptured).append("+ bytes (truncated), Content-Type: ").append(contentTypeStr).append("]\n");
+            } else {
+                stringBuilder.append("[Binary data: ").append(totalCaptured).append(" bytes, Content-Type: ").append(contentTypeStr).append("]\n");
+            }
+        } else if (totalCaptured >= MAX_BODY_SIZE) {
+            // テキストデータで上限に達した場合
+            stringBuilder.append(new String(capturedData, StandardCharsets.UTF_8));
+            stringBuilder.append("\n... (truncated at ").append(MAX_BODY_SIZE).append(" bytes, actual size may be larger)\n");
+        } else {
+            stringBuilder.append(new String(capturedData, StandardCharsets.UTF_8)).append("\n");
+        }
+        stringBuilder.append("=========================\n");
     }
 }
