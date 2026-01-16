@@ -965,6 +965,79 @@ class ApiLoggingFilterTest {
                 () -> assertThat(hasLogContaining("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).isTrue()
             );
         }
+
+        @Test
+        @DisplayName("10KBを超えるバイナリレスポンス - 切り詰めて処理")
+        void testLargeBinaryResponse() {
+            // Given - 20KBのバイナリデータ（MAX_BODY_SIZE=10KBを超える）
+            byte[] largeData = new byte[20 * 1024];
+            for (int i = 0; i < largeData.length; i++) {
+                largeData[i] = (byte) (i % 256);
+            }
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                .setBody(new okio.Buffer().write(largeData)));
+
+            // When
+            byte[] response = webClient.get()
+                .uri("/api/large-download")
+                .accept(MediaType.APPLICATION_OCTET_STREAM)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
+
+            // Then - 全データが正しく取得できること（ストリーミングで流れる）
+            assertThat(response).isNotNull();
+            assertThat(response.length).isEqualTo(20 * 1024);
+
+            // ログ出力の検証 - バイナリとして処理され、切り詰めメッセージが表示されること
+            assertAll(
+                () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
+                () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
+                () -> assertThat(hasLogContaining("truncated")).isTrue(),
+                () -> assertThat(hasLogContaining("Content-Type: application/octet-stream")).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("10KBを超えるJSONレスポンス - 切り詰めて処理")
+        void testLargeJsonResponse() {
+            // Given - 15KBを超えるJSONデータ
+            StringBuilder largeJson = new StringBuilder("{\"data\":\"");
+            for (int i = 0; i < 15 * 1024; i++) {
+                largeJson.append("x");
+            }
+            largeJson.append("\"}");
+
+            mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .setBody(largeJson.toString()));
+
+            // When
+            String response = webClient.get()
+                .uri("/api/large-json")
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+            // Then - 全データが正しく取得できること
+            assertThat(response).isNotNull();
+            assertThat(response.length()).isGreaterThan(15 * 1024);
+
+            // ログ出力の検証 - テキストとして処理され、切り詰めメッセージが表示されること
+            assertAll(
+                () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
+                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("truncated")).isTrue(),
+                () -> assertThat(hasLogContaining("=========================")).isTrue()
+            );
+        }
     }
 }
 
