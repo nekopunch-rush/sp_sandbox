@@ -121,7 +121,7 @@ public class ApiLoggingFilter {
                         @NonNull
                         public Mono<Void> setComplete() {
                             // ボディがないリクエスト（GETなど）の場合
-                            log.info("{}", stringBuilder);
+                            log.info("[Request]\n{}", stringBuilder);
                             return super.setComplete();
                         }
                     };
@@ -133,7 +133,7 @@ public class ApiLoggingFilter {
                 .doOnError(e -> {
                     // 接続エラー・タイムアウト等の場合
                     stringBuilder.append("Error during exchange: ").append(e.getMessage()).append("\n");
-                    log.error("[Request Error]\n{}", stringBuilder);
+                    log.info("[Request Error]\n{}", stringBuilder);
                 });
         };
     }
@@ -165,17 +165,17 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("\n----- Request Information -----\n");
+        stringBuilder.append("\n----- Request Information ------\n");
         stringBuilder.append("METHOD: ").append(req.method()).append("\n");
         stringBuilder.append("URL: ").append(req.url()).append("\n");
         stringBuilder.append("HEADERS: ").append("\n");
         StringBuilder finalStringBuilder = stringBuilder;
         req.headers().forEach((key, values) -> {
             finalStringBuilder.append("    ").append(key).append(": ");
-            values.forEach(value -> finalStringBuilder.append(value).append(", "));
+            finalStringBuilder.append(String.join(", ", values));
             finalStringBuilder.append("\n");
         });
-        stringBuilder.append("-------------------------------\n");
+        stringBuilder.append("--------------------------------\n");
     }
 
     /**
@@ -192,7 +192,7 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("===== Request Body =====\n");
+        stringBuilder.append("======== Request Body =========\n");
         if (bodyBytes == null) {
             stringBuilder.append("null\n");
         } else if (bodyBytes.length == 0) {
@@ -208,7 +208,7 @@ public class ApiLoggingFilter {
         } else {
             stringBuilder.append(new String(bodyBytes, StandardCharsets.UTF_8)).append("\n");
         }
-        stringBuilder.append("========================\n");
+        stringBuilder.append("================================\n");
     }
 
 
@@ -247,13 +247,13 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("===== Response Body =====\n");
+        stringBuilder.append("======== Response Body ========\n");
         stringBuilder.append("Error reading body: ").append(e.getMessage()).append("\n");
-        stringBuilder.append("=========================\n");
+        stringBuilder.append("================================\n");
     }
 
     /**
-     * レスポンスのメタ情報（ステータスコード、ヘッダー）をStringBuilderに追記する。
+     * 指定されたContent-Typeがバイナリデータかどうかを判定する。
      *
      * @param stringBuilder ログ出力用のStringBuilder
      * @param response レスポンス情報
@@ -267,7 +267,9 @@ public class ApiLoggingFilter {
         stringBuilder.append("HEADERS: ").append("\n");
         StringBuilder finalStringBuilder = stringBuilder;
         response.headers().asHttpHeaders().forEach((key, values) -> {
-            values.forEach(value -> finalStringBuilder.append("    ").append(key).append(": ").append(value).append("\n"));
+            finalStringBuilder.append("    ").append(key).append(": ");
+            finalStringBuilder.append(String.join(", ", values));
+            finalStringBuilder.append("\n");
         });
         stringBuilder.append("--------------------------------\n");
     }
@@ -335,7 +337,7 @@ public class ApiLoggingFilter {
                     .doOnError(e -> {
                         if (logged.compareAndSet(false, true)) {
                             loggingResponseWithBodyError(stringBuilder, e);
-                            log.error("[Response]\n{}", stringBuilder);
+                            log.info("[Response]\n{}", stringBuilder);
                         }
                     })
                     .switchIfEmpty(Flux.defer(() -> {
@@ -369,7 +371,7 @@ public class ApiLoggingFilter {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
         }
-        stringBuilder.append("===== Response Body =====\n");
+        stringBuilder.append("======== Response Body ========\n");
 
         if (capturedData == null || capturedData.length == 0) {
             stringBuilder.append("(empty)\n");
@@ -388,6 +390,6 @@ public class ApiLoggingFilter {
         } else {
             stringBuilder.append(new String(capturedData, StandardCharsets.UTF_8)).append("\n");
         }
-        stringBuilder.append("=========================\n");
+        stringBuilder.append("================================\n");
     }
 }

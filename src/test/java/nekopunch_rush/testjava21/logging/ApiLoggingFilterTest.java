@@ -243,21 +243,21 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("METHOD: POST")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("HEADERS:")).isTrue(),
                 () -> assertThat(hasLogContaining("-------------------------------")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Request Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Request Body =========")).isTrue(),
                 () -> assertThat(hasLogContaining("hello")).isTrue(), // リクエストボディの内容
-                () -> assertThat(hasLogContaining("========================")).isTrue(),
+                () -> assertThat(hasLogContaining("===============================")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
                 () -> assertThat(hasLogContaining("--------------------------------")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("ok")).isTrue(), // レスポンスボディの内容
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
 
@@ -298,7 +298,7 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("METHOD: GET")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
@@ -307,9 +307,9 @@ class ApiLoggingFilterTest {
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
                 () -> assertThat(hasLogContaining("--------------------------------")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("get result")).isTrue(), // レスポンスボディの内容
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
     }
@@ -364,21 +364,21 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("METHOD: POST")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/xml/test")).isTrue(),
                 () -> assertThat(hasLogContaining("HEADERS:")).isTrue(),
                 () -> assertThat(hasLogContaining("-------------------------------")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Request Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Request Body =========")).isTrue(),
                 () -> assertThat(hasLogContaining("hello xml")).isTrue(), // リクエストボディの内容
-                () -> assertThat(hasLogContaining("========================")).isTrue(),
+                () -> assertThat(hasLogContaining("===============================")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
                 () -> assertThat(hasLogContaining("--------------------------------")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("xml ok")).isTrue(), // レスポンスボディの内容
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
     }
@@ -418,12 +418,12 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 400 BAD_REQUEST")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("Invalid input")).isTrue() // エラーレスポンスボディの内容
             );
         }
@@ -459,12 +459,12 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 500 INTERNAL_SERVER_ERROR")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("Something went wrong")).isTrue() // エラーレスポンスボディの内容
             );
         }
@@ -505,7 +505,7 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証（リクエストログは出力される）
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 // エラーログが出力されることを確認（Request ErrorまたはResponse Error）
@@ -541,7 +541,7 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証（リクエストログは出力される）
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue()
             );
@@ -575,7 +575,7 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証（リクエストログは出力される）
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("Error during exchange")).isTrue() // エラーログ
@@ -610,7 +610,7 @@ class ApiLoggingFilterTest {
 
             // Then - ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
@@ -649,13 +649,13 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("URL:")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/test")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
     }
@@ -694,16 +694,16 @@ class ApiLoggingFilterTest {
 
             // ログ出力の検証 - バイナリとして処理されていること
             assertAll(
-                () -> assertThat(hasLogContaining("----- Request Information -----")).isTrue(),
+                () -> assertThat(hasLogContaining("----- Request Information ------")).isTrue(),
                 () -> assertThat(hasLogContaining("METHOD: GET")).isTrue(),
                 () -> assertThat(hasLogContaining("/api/image")).isTrue(),
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("[Binary data:")).isTrue(),
                 () -> assertThat(hasLogContaining("bytes")).isTrue(),
                 () -> assertThat(hasLogContaining("Content-Type: image/png")).isTrue(),
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
 
@@ -1033,9 +1033,9 @@ class ApiLoggingFilterTest {
             assertAll(
                 () -> assertThat(hasLogContaining("----- Response Information -----")).isTrue(),
                 () -> assertThat(hasLogContaining("STATUS CODE: 200 OK")).isTrue(),
-                () -> assertThat(hasLogContaining("===== Response Body =====")).isTrue(),
+                () -> assertThat(hasLogContaining("======== Response Body ========")).isTrue(),
                 () -> assertThat(hasLogContaining("truncated")).isTrue(),
-                () -> assertThat(hasLogContaining("=========================")).isTrue()
+                () -> assertThat(hasLogContaining("===============================")).isTrue()
             );
         }
     }
